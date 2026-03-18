@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuisine At Random</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f0f0f;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.3rem;
+    color: #fff;
+  }
+
+  .subtitle {
+    color: #888;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 520px;
+  }
+
+  /* --- Form Controls --- */
+  .field { margin-bottom: 1.2rem; }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #999;
+    margin-bottom: 0.4rem;
+  }
+
+  input[type="text"], select {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus, select:focus {
+    border-color: #646cff;
+  }
+
+  select { cursor: pointer; }
+  select:disabled { opacity: 0.4; cursor: not-allowed; }
+  select option { background: #1a1a1a; }
+
+  .row {
+    display: flex;
+    gap: 0.8rem;
+  }
+
+  .row > .field { flex: 1; }
+
+  /* --- Cuisine Checkboxes --- */
+  .cuisine-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.4rem 0.8rem;
+  }
+
+  .cuisine-grid label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+    text-transform: none;
+    letter-spacing: 0;
+    color: #ccc;
+    cursor: pointer;
+  }
+
+  .cuisine-grid input[type="checkbox"] {
+    accent-color: #646cff;
+    width: 16px;
+    height: 16px;
+  }
+
+  /* --- Toggle --- */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .toggle-row span {
+    font-size: 0.9rem;
+    color: #ccc;
+  }
+
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+  }
+
+  .toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle .slider {
+    position: absolute;
+    inset: 0;
+    background: #333;
+    border-radius: 24px;
+    transition: background 0.2s;
+  }
+
+  .toggle .slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+
+  .toggle input:checked + .slider { background: #646cff; }
+  .toggle input:checked + .slider::before { transform: translateX(20px); }
+
+  /* --- Button --- */
+  .btn {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #646cff;
+    color: #fff;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .btn:hover { background: #535bf2; }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* --- Spinner --- */
+  .spinner {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem 0;
+  }
+
+  .spinner.active { display: flex; }
+
+  .spinner .dot {
+    width: 10px;
+    height: 10px;
+    margin: 0 4px;
+    background: #646cff;
+    border-radius: 50%;
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+
+  .spinner .dot:nth-child(2) { animation-delay: 0.15s; }
+  .spinner .dot:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+  }
+
+  /* --- Result Card --- */
+  .result-card {
+    display: none;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    animation: fadeUp 0.4s ease-out;
+  }
+
+  .result-card.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-card h2 {
+    font-size: 1.3rem;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+
+  .result-meta {
+    font-size: 0.85rem;
+    color: #999;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .result-meta .rating { color: #f5c518; }
+  .result-meta .open { color: #4caf50; }
+  .result-meta .closed { color: #ef5350; }
+
+  .result-meta .distance {
+    color: #90caf9;
+  }
+
+  .result-description {
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: #bbb;
+    border-top: 1px solid #2a2a2a;
+    padding-top: 1rem;
+  }
+
+  .result-description.loading {
+    color: #666;
+    font-style: italic;
+  }
+
+  .result-actions {
+    margin-bottom: 0.6rem;
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  .result-actions a {
+    font-size: 0.85rem;
+    color: #8b8fff;
+    text-decoration: none;
+  }
+
+  .result-actions a:hover { text-decoration: underline; }
+
+  /* --- Error --- */
+  .error-msg {
+    display: none;
+    background: #2a1515;
+    border: 1px solid #5a2020;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin-top: 1rem;
+    color: #ef5350;
+    font-size: 0.9rem;
+  }
+
+  .error-msg.active { display: block; }
+
+  .no-price { font-size: 0.85rem; color: #ef5350; font-weight: bold; margin-bottom: 0.4rem; }
+
+  /* --- Responsive --- */
+  @media (max-width: 500px) {
+    .row { flex-direction: column; gap: 0; }
+    .cuisine-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<h1>Cuisine At Random</h1>
+<p class="subtitle">Randomly pick a spot to eat near you</p>
+
+<div class="app">
+  <!-- Use My Location Toggle -->
+  <div class="toggle-row">
+    <label class="toggle">
+      <input type="checkbox" id="useMyLocation">
+      <span class="slider"></span>
+    </label>
+    <span>Use my location</span>
+  </div>
+
+  <!-- Geolocation status (hidden by default) -->
+  <div class="field" id="geoField" style="display:none;">
+    <label>Location</label>
+    <span id="geoStatus" style="font-size:0.9rem;color:#999;">Click Generate to detect your location</span>
+  </div>
+
+  <!-- Location Mode -->
+  <div class="field" id="locationModeField">
+    <label for="locationMode">Search by</label>
+    <select id="locationMode">
+      <option value="zip">Zipcode</option>
+      <option value="dd">Longitude/Latitude (copy from Google Maps)</option>
+    </select>
+  </div>
+
+  <!-- Zipcode input -->
+  <div class="field" id="zipField">
+    <label for="zipcode">Zipcode</label>
+    <input type="text" id="zipcode" placeholder="e.g. 90210" maxlength="10">
+  </div>
+
+  <!-- DD input -->
+  <div class="field" id="ddField" style="display:none;">
+    <label for="dd">Coordinates</label>
+    <input type="text" id="dd" placeholder="e.g. 34.052235, -118.243683">
+  </div>
+
+  <!-- Distance + Open Now row -->
+  <div class="row">
+    <div class="field">
+      <label for="distance">Distance</label>
+      <select id="distance" disabled>
+        <option value="3219">Walkable (0–2 miles)</option>
+        <option value="8047">0–5 miles</option>
+        <option value="16093" selected>0–10 miles</option>
+        <option value="32187">0–20 miles</option>
+        <option value="50000">0–30 miles</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Open Now Toggle -->
+  <div class="toggle-row">
+    <label class="toggle">
+      <input type="checkbox" id="openNow" checked>
+      <span class="slider"></span>
+    </label>
+    <span>Open now only</span>
+  </div>
+
+  <!-- I Am Broke Toggle -->
+  <div class="toggle-row">
+    <label class="toggle">
+      <input type="checkbox" id="iAmBroke">
+      <span class="slider"></span>
+    </label>
+    <span>I am broke</span>
+  </div>
+
+  <!-- Cuisine Filters -->
+  <div class="field">
+    <label>Cuisines (leave blank for any)</label>
+    <div class="cuisine-grid" id="cuisineGrid">
+      <label><input type="checkbox" value="american_restaurant"> American</label>
+      <label><input type="checkbox" value="asian"> Asian</label>
+      <label><input type="checkbox" value="barbecue_restaurant"> BBQ</label>
+      <label><input type="checkbox" value="brunch_restaurant"> Brunch</label>
+      <label><input type="checkbox" value="hamburger_restaurant"> Burgers</label>
+      <label><input type="checkbox" value="chinese_restaurant"> Chinese</label>
+      <label><input type="checkbox" value="indian_restaurant"> Indian</label>
+      <label><input type="checkbox" value="italian_restaurant"> Italian</label>
+      <label><input type="checkbox" value="japanese_restaurant"> Japanese</label>
+      <label><input type="checkbox" value="korean_restaurant"> Korean</label>
+      <label><input type="checkbox" value="mediterranean_restaurant"> Mediterranean</label>
+      <label><input type="checkbox" value="mexican_restaurant"> Mexican</label>
+      <label><input type="checkbox" value="pizza_restaurant"> Pizza</label>
+      <label><input type="checkbox" value="ramen_restaurant"> Ramen</label>
+      <label><input type="checkbox" value="sandwich_shop"> Sandwich</label>
+      <label><input type="checkbox" value="seafood_restaurant"> Seafood</label>
+      <label><input type="checkbox" value="steak_house"> Steakhouse</label>
+      <label><input type="checkbox" value="sushi_restaurant"> Sushi</label>
+      <label><input type="checkbox" value="thai_restaurant"> Thai</label>
+      <label><input type="checkbox" value="vegan_restaurant"> Vegan</label>
+      <label><input type="checkbox" value="vegetarian_restaurant"> Vegetarian</label>
+      <label><input type="checkbox" value="vietnamese_restaurant"> Vietnamese</label>
+    </div>
+  </div>
+
+  <!-- Other Filters -->
+  <div class="field">
+    <label>Other</label>
+    <div class="cuisine-grid" id="otherGrid">
+      <label><input type="checkbox" value="bakery"> Bakery</label>
+      <label><input type="checkbox" value="bar_and_grill"> Bar</label>
+      <label><input type="checkbox" value="tea_house"> Boba/Tea</label>
+      <label><input type="checkbox" value="cafe"> Cafe</label>
+      <label><input type="checkbox" value="dessert_shop"> Dessert</label>
+      <label><input type="checkbox" value="donut_shop"> Donuts</label>
+      <label><input type="checkbox" value="ice_cream_shop"> Ice Cream</label>
+    </div>
+  </div>
+
+  <!-- Generate Button -->
+  <button class="btn" id="generateBtn">Generate</button>
+
+  <!-- Spinner -->
+  <div class="spinner" id="spinner">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-msg" id="error"></div>
+
+  <!-- Result -->
+  <div class="result-card" id="result">
+    <h2 id="resultName"></h2>
+    <div class="result-actions">
+      <a id="resultMaps" href="#" target="_blank" rel="noopener">Open in Google Maps</a>
+      <a id="resultWebsite" href="#" target="_blank" rel="noopener" style="display:none;">Visit Website</a>
+    </div>
+    <div class="no-price" id="resultNoPrice"></div>
+    <div class="result-meta">
+      <div id="resultAddress"></div>
+      <div><span class="rating" id="resultRating"></span> <span id="resultPrice"></span> <span id="resultOpenStatus"></span></div>
+      <div id="resultHours"></div>
+      <div class="distance" id="resultDistance"></div>
+    </div>
+    <div class="result-description" id="resultDesc">Loading description...</div>
+  </div>
+</div>
+
+<script>
+// API keys are stored server-side in Vercel environment variables
+
+// --- DOM refs ---
+const locationMode = document.getElementById('locationMode');
+const locationModeField = document.getElementById('locationModeField');
+const zipField = document.getElementById('zipField');
+const ddField = document.getElementById('ddField');
+const useMyLocationToggle = document.getElementById('useMyLocation');
+const geoField = document.getElementById('geoField');
+const geoStatus = document.getElementById('geoStatus');
+const zipcodeInput = document.getElementById('zipcode');
+const ddInput = document.getElementById('dd');
+const distanceSelect = document.getElementById('distance');
+const openNowCheckbox = document.getElementById('openNow');
+const iAmBrokeCheckbox = document.getElementById('iAmBroke');
+const generateBtn = document.getElementById('generateBtn');
+const spinner = document.getElementById('spinner');
+const errorDiv = document.getElementById('error');
+const resultCard = document.getElementById('result');
+const resultName = document.getElementById('resultName');
+const resultNoPrice = document.getElementById('resultNoPrice');
+const resultAddress = document.getElementById('resultAddress');
+const resultRating = document.getElementById('resultRating');
+const resultOpenStatus = document.getElementById('resultOpenStatus');
+const resultDistance = document.getElementById('resultDistance');
+const resultPrice = document.getElementById('resultPrice');
+const resultDesc = document.getElementById('resultDesc');
+const resultMaps = document.getElementById('resultMaps');
+const resultWebsite = document.getElementById('resultWebsite');
+const resultHours = document.getElementById('resultHours');
+
+// --- Helpers ---
+
+function showError(msg) {
+  errorDiv.textContent = msg;
+  errorDiv.classList.add('active');
+}
+
+function clearError() {
+  errorDiv.classList.remove('active');
+}
+
+function setLoading(on) {
+  spinner.classList.toggle('active', on);
+  generateBtn.disabled = on;
+}
+
+/** Parse decimal degrees string like `34.052235, -118.243683` into { lat, lng } */
+function parseDD(str) {
+  const parts = str.split(/[,\s]+/).filter(Boolean);
+  if (parts.length !== 2) return null;
+  const lat = parseFloat(parts[0]);
+  const lng = parseFloat(parts[1]);
+  if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}
+
+/** Haversine distance in miles */
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 3958.8; // Earth radius in miles
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Get browser geolocation as { lat, lng } */
+function getBrowserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation is not supported by your browser.'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      err => {
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            reject(new Error('Location permission denied. Please allow location access and try again.'));
+            break;
+          case err.POSITION_UNAVAILABLE:
+            reject(new Error('Location information is unavailable. Please try again or use zipcode instead.'));
+            break;
+          case err.TIMEOUT:
+            reject(new Error('Location request timed out. Please try again or use zipcode instead.'));
+            break;
+          default:
+            reject(new Error('Unable to get your location. Please try again or use zipcode instead.'));
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    );
+  });
+}
+
+/** Geocode a zipcode to lat/lng using Google Places Text Search API */
+async function geocodeZipcode(zip) {
+  const res = await fetch('/api/places-text', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-FieldMask': 'places.location'
+    },
+    body: JSON.stringify({ textQuery: `zipcode ${zip}, USA` })
+  });
+  const data = await res.json();
+  if (!data.places || !data.places.length) {
+    throw new Error('Could not find that zipcode. Please check and try again.');
+  }
+  const loc = data.places[0].location;
+  return { lat: loc.latitude, lng: loc.longitude };
+}
+
+/** Fallback: search for restaurants in a zipcode via Text Search */
+async function textSearchRestaurants(zip) {
+  const fieldMask = [
+    'places.displayName',
+    'places.formattedAddress',
+    'places.rating',
+    'places.userRatingCount',
+    'places.currentOpeningHours',
+    'places.location',
+    'places.googleMapsUri',
+    'places.businessStatus',
+    'places.priceLevel',
+    'places.priceRange',
+    'places.websiteUri'
+  ].join(',');
+
+  const res = await fetch('/api/places-text', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-FieldMask': fieldMask
+    },
+    body: JSON.stringify({ textQuery: `restaurants near ${zip}` })
+  });
+  const data = await res.json();
+  return data.places || [];
+}
+
+/** Map Google priceLevel string to numeric value */
+function priceLevelToNumber(priceLevel) {
+  const map = {
+    'PRICE_LEVEL_INEXPENSIVE': 1,
+    'PRICE_LEVEL_MODERATE': 2,
+    'PRICE_LEVEL_EXPENSIVE': 3,
+    'PRICE_LEVEL_VERY_EXPENSIVE': 4
+  };
+  return map[priceLevel] || null;
+}
+
+/** Derive price level number from priceRange when priceLevel is missing */
+function priceRangeToNumber(priceRange) {
+  if (!priceRange?.endPrice?.units) return null;
+  const high = parseInt(priceRange.endPrice.units);
+  if (high <= 15) return 1;       // $ — Inexpensive
+  if (high <= 40) return 2;       // $$ — Moderate
+  if (high <= 100) return 3;      // $$$ — Expensive
+  return 4;                       // $$$$ — Very Expensive
+}
+
+/** Get effective price level number for a place (uses priceLevel, falls back to priceRange) */
+function getPlacePriceNumber(place) {
+  return priceLevelToNumber(place.priceLevel) || priceRangeToNumber(place.priceRange);
+}
+
+/** Convert a place's price data to display string */
+function formatPriceDisplay(place) {
+  const n = getPlacePriceNumber(place);
+  return n ? '$'.repeat(n) : '';
+}
+
+/** Search nearby restaurants using Google Places API (New) */
+async function searchNearby(lat, lng, radiusMeters, cuisineTypes, openNow, iAmBroke) {
+  const baseBody = {
+    locationRestriction: {
+      circle: {
+        center: { latitude: lat, longitude: lng },
+        radius: radiusMeters
+      }
+    },
+    includedTypes: cuisineTypes.length > 0 ? cuisineTypes : ['restaurant'],
+    maxResultCount: 20,
+    languageCode: 'en'
+  };
+
+  const fieldMask = [
+    'places.displayName',
+    'places.formattedAddress',
+    'places.rating',
+    'places.userRatingCount',
+    'places.currentOpeningHours',
+    'places.location',
+    'places.googleMapsUri',
+    'places.businessStatus',
+    'places.priceLevel',
+    'places.priceRange',
+    'places.websiteUri'
+  ].join(',');
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Goog-FieldMask': fieldMask
+  };
+
+  // Make parallel calls with different rankings to build a larger pool
+  const fetches = [
+    fetch('/api/places-nearby', {
+      method: 'POST', headers,
+      body: JSON.stringify({ ...baseBody, rankPreference: 'POPULARITY' })
+    }),
+    fetch('/api/places-nearby', {
+      method: 'POST', headers,
+      body: JSON.stringify({ ...baseBody, rankPreference: 'DISTANCE' })
+    })
+  ];
+
+  // When no cuisine filter is set, also search specialty types that Google
+  // doesn't return under generic "restaurant"
+  if (cuisineTypes.length === 0) {
+    const specialtyTypes = ['steak_house', 'fine_dining_restaurant', 'brunch_restaurant']
+      .filter(t => !(iAmBroke && t === 'fine_dining_restaurant'));
+    const specialtyBody = {
+      ...baseBody,
+      includedTypes: specialtyTypes
+    };
+    fetches.push(
+      fetch('/api/places-nearby', {
+        method: 'POST', headers,
+        body: JSON.stringify({ ...specialtyBody, rankPreference: 'POPULARITY' })
+      })
+    );
+  }
+
+  const responses = await Promise.all(fetches);
+  const results = await Promise.all(responses.map(r => r.json()));
+
+  const firstError = results.find(d => d.error);
+  if (results.every(d => d.error)) {
+    throw new Error(firstError.error.message || 'Google Places API error');
+  }
+
+  // Merge and deduplicate by name + address
+  const seen = new Set();
+  const allPlaces = [];
+  for (const data of results) {
+    for (const p of (data.places || [])) {
+      const key = (p.displayName?.text || '') + '|' + (p.formattedAddress || '');
+      if (!seen.has(key)) {
+        seen.add(key);
+        allPlaces.push(p);
+      }
+    }
+  }
+
+  // Filter out permanently closed restaurants
+  let filtered = allPlaces.filter(p => !p.businessStatus || p.businessStatus === 'OPERATIONAL');
+
+  // Filter by price if "I am broke" is on
+  if (iAmBroke) {
+    filtered = filtered.filter(p => {
+      const price = getPlacePriceNumber(p);
+      return price === null || price <= 2;
+    });
+  }
+
+  // Filter by open now if toggled on
+  if (openNow) {
+    filtered = filtered.filter(p => {
+      if (!p.currentOpeningHours) return false;
+      return p.currentOpeningHours.openNow === true;
+    });
+    if (filtered.length === 0 && allPlaces.length > 0) {
+      throw new Error('Found restaurants in this area but none are open right now. Try turning off the "Open now only" toggle.');
+    }
+  }
+
+  return filtered;
+}
+
+/** Generate a fun AI description via Groq */
+async function generateDescription(name, address) {
+  const prompt = `Write a fun, enthusiastic 2-3 sentence description for a restaurant called "${name}" located at "${address}". Be creative and make it sound appealing. Don't use quotation marks around the restaurant name.`;
+
+  try {
+    const res = await fetch('/api/groq', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 200,
+        temperature: 0.8
+      })
+    });
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || 'A great spot to grab a bite!';
+  } catch {
+    return 'A great spot to grab a bite!';
+  }
+}
+
+/** Format star rating display */
+function formatRating(rating, count) {
+  if (!rating) return '';
+  const stars = '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
+  const countStr = count ? ` (${count})` : '';
+  return `${stars} ${rating.toFixed(1)}${countStr}`;
+}
+
+// --- Main ---
+
+generateBtn.addEventListener('click', async () => {
+  const useGeo = useMyLocationToggle.checked;
+  const mode = locationMode.value;
+  const zip = zipcodeInput.value.trim();
+  const ddStr = ddInput.value.trim();
+
+  if (!useGeo && mode === 'zip' && !zip) {
+    showError('Please enter a zipcode.');
+    return;
+  }
+  if (!useGeo && mode === 'dd' && !ddStr) {
+    showError('Please enter coordinates.');
+    return;
+  }
+
+  clearError();
+  resultCard.classList.remove('active');
+  setLoading(true);
+
+  try {
+    // 1. Determine search center
+    let searchCenter;
+    let userLocation = null;
+
+    if (useGeo) {
+      geoStatus.textContent = 'Detecting your location...';
+      const loc = await getBrowserLocation();
+      userLocation = loc;
+      searchCenter = loc;
+      geoStatus.textContent = `Location: ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`;
+    } else if (mode === 'dd') {
+      userLocation = parseDD(ddStr);
+      if (!userLocation) {
+        throw new Error('Could not parse coordinates. Use format like: 34.052235, -118.243683');
+      }
+      searchCenter = userLocation;
+    } else {
+      searchCenter = await geocodeZipcode(zip);
+    }
+
+    // 2. Get selected cuisine types (separate cuisine vs other)
+    const ASIAN_TYPES = ['chinese_restaurant', 'japanese_restaurant', 'indian_restaurant', 'thai_restaurant', 'korean_restaurant', 'vietnamese_restaurant', 'sushi_restaurant', 'ramen_restaurant'];
+    const cuisineSelections = [...new Set(
+      [...document.querySelectorAll('#cuisineGrid input:checked')]
+        .flatMap(cb => cb.value === 'asian' ? ASIAN_TYPES : [cb.value])
+    )];
+    const otherSelections = [...document.querySelectorAll('#otherGrid input:checked')]
+      .map(cb => cb.value);
+    const cuisineTypes = [...cuisineSelections, ...otherSelections];
+
+    // 3. Get radius
+    const radiusMeters = +distanceSelect.value;
+
+    // 4. Get open now preference
+    const openNow = openNowCheckbox.checked;
+
+    // 5. Get "I am broke" preference
+    const iAmBroke = iAmBrokeCheckbox.checked;
+
+    // 6. Search nearby restaurants
+    let places = await searchNearby(searchCenter.lat, searchCenter.lng, radiusMeters, cuisineTypes, openNow, iAmBroke);
+
+    if (places.length === 0) {
+      throw new Error('No results found. Try expanding your search distance or removing filters.');
+    }
+
+    // 9. Pick a random restaurant
+    const place = places[Math.floor(Math.random() * places.length)];
+    const name = place.displayName?.text || 'Unknown Restaurant';
+    const address = place.formattedAddress || '';
+    const rating = place.rating;
+    const ratingCount = place.userRatingCount;
+    const isOpen = place.currentOpeningHours?.openNow;
+    const mapsUrl = place.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + address)}`;
+
+    // 8. Calculate distance if user provided coordinates
+    let distText = '';
+    if (userLocation && place.location) {
+      const dist = haversine(userLocation.lat, userLocation.lng, place.location.latitude, place.location.longitude);
+      distText = `~${dist.toFixed(1)} miles from you`;
+    }
+
+    // 9. Display result
+    resultName.textContent = name;
+    resultAddress.textContent = address;
+    resultRating.innerHTML = formatRating(rating, ratingCount);
+    const priceDollars = formatPriceDisplay(place);
+    if (priceDollars) {
+      resultPrice.textContent = ` · ${priceDollars}`;
+      resultNoPrice.textContent = '';
+    } else {
+      resultPrice.textContent = '';
+      resultNoPrice.textContent = 'Price unavailable. Proceed with caution (and maybe a backup credit card).';
+    }
+    resultOpenStatus.className = isOpen ? 'open' : 'closed';
+    resultOpenStatus.textContent = isOpen === true ? ' · Open Now' : isOpen === false ? ' · Closed' : '';
+    // Today's hours
+    const weekdays = place.currentOpeningHours?.weekdayDescriptions;
+    if (weekdays && weekdays.length === 7) {
+      const todayIndex = (new Date().getDay() + 6) % 7;
+      const todayLine = weekdays[todayIndex];
+      const colonPos = todayLine.indexOf(':');
+      resultHours.textContent = colonPos !== -1 ? "Today's Hours: " + todayLine.substring(colonPos + 1).trim() : todayLine;
+    } else {
+      resultHours.textContent = '';
+    }
+
+    resultDistance.textContent = distText;
+    resultMaps.href = mapsUrl;
+    if (place.websiteUri) {
+      resultWebsite.href = place.websiteUri;
+      resultWebsite.style.display = '';
+    } else {
+      resultWebsite.style.display = 'none';
+    }
+    resultDesc.textContent = 'Generating description...';
+    resultDesc.classList.add('loading');
+    resultCard.classList.add('active');
+
+    setLoading(false);
+
+    // 10. Generate AI description (non-blocking for UI)
+    const desc = await generateDescription(name, address);
+    resultDesc.textContent = desc;
+    resultDesc.classList.remove('loading');
+
+  } catch (err) {
+    setLoading(false);
+    showError(err.message);
+  }
+});
+
+// Allow Enter key on inputs
+zipcodeInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') generateBtn.click();
+});
+ddInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') generateBtn.click();
+});
+
+// Toggle "Use my location" mode
+useMyLocationToggle.addEventListener('change', () => {
+  if (useMyLocationToggle.checked) {
+    locationModeField.style.display = 'none';
+    zipField.style.display = 'none';
+    ddField.style.display = 'none';
+    geoField.style.display = '';
+    geoStatus.textContent = 'Click Generate to detect your location';
+    distanceSelect.disabled = false;
+  } else {
+    locationModeField.style.display = '';
+    geoField.style.display = 'none';
+    const isDD = locationMode.value === 'dd';
+    zipField.style.display = isDD ? 'none' : '';
+    ddField.style.display = isDD ? '' : 'none';
+    distanceSelect.disabled = !isDD;
+  }
+});
+
+// Switch between zipcode and DD mode
+locationMode.addEventListener('change', () => {
+  if (useMyLocationToggle.checked) return;
+  const isDD = locationMode.value === 'dd';
+  zipField.style.display = isDD ? 'none' : '';
+  ddField.style.display = isDD ? '' : 'none';
+  distanceSelect.disabled = !isDD;
+  zipcodeInput.value = '';
+  ddInput.value = '';
+});
+</script>
+
+<script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>
