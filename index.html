@@ -3,29 +3,50 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Cuisine At Random</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #0f0f0f;
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
     color: #e0e0e0;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 2rem 1rem;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='350' height='350'%3E%3Ctext x='20' y='65' font-size='58' opacity='0.18'%3E🍕%3C/text%3E%3Ctext x='200' y='50' font-size='52' opacity='0.15'%3E🍜%3C/text%3E%3Ctext x='90' y='160' font-size='56' opacity='0.18'%3E🌮%3C/text%3E%3Ctext x='260' y='145' font-size='48' opacity='0.14'%3E🍣%3C/text%3E%3Ctext x='15' y='260' font-size='52' opacity='0.15'%3E🍔%3C/text%3E%3Ctext x='170' y='270' font-size='58' opacity='0.18'%3E🍝%3C/text%3E%3Ctext x='60' y='340' font-size='48' opacity='0.14'%3E🥗%3C/text%3E%3Ctext x='270' y='330' font-size='54' opacity='0.16'%3E🍩%3C/text%3E%3C/svg%3E")
+      repeat;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
   }
 
   h1 {
-    font-size: 1.8rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(1.8rem, 5vw, 3.2rem);
     margin-bottom: 0.3rem;
     color: #fff;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
 
   .subtitle {
-    color: #888;
+    color: rgba(255, 255, 255, 0.5);
     margin-bottom: 2rem;
     font-size: 0.95rem;
   }
@@ -33,6 +54,11 @@
   .app {
     width: 100%;
     max-width: 520px;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 1.5rem 2rem;
   }
 
   /* --- Form Controls --- */
@@ -50,8 +76,8 @@
   input[type="text"], select {
     width: 100%;
     padding: 0.65rem 0.8rem;
-    background: #1a1a1a;
-    border: 1px solid #333;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     color: #e0e0e0;
     font-size: 1rem;
@@ -60,12 +86,12 @@
   }
 
   input[type="text"]:focus, select:focus {
-    border-color: #646cff;
+    border-color: #7c83ff;
   }
 
   select { cursor: pointer; }
   select:disabled { opacity: 0.4; cursor: not-allowed; }
-  select option { background: #1a1a1a; }
+  select option { background: #24243e; }
 
   .row {
     display: flex;
@@ -93,7 +119,7 @@
   }
 
   .cuisine-grid input[type="checkbox"] {
-    accent-color: #646cff;
+    accent-color: #7c83ff;
     width: 16px;
     height: 16px;
   }
@@ -127,7 +153,7 @@
   .toggle .slider {
     position: absolute;
     inset: 0;
-    background: #333;
+    background: rgba(255, 255, 255, 0.15);
     border-radius: 24px;
     transition: background 0.2s;
   }
@@ -144,7 +170,7 @@
     transition: transform 0.2s;
   }
 
-  .toggle input:checked + .slider { background: #646cff; }
+  .toggle input:checked + .slider { background: #7c83ff; }
   .toggle input:checked + .slider::before { transform: translateX(20px); }
 
   /* --- Button --- */
@@ -156,12 +182,12 @@
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    background: #646cff;
+    background: #7c83ff;
     color: #fff;
     transition: background 0.2s, transform 0.1s;
   }
 
-  .btn:hover { background: #535bf2; }
+  .btn:hover { background: #6a71f0; }
   .btn:active { transform: scale(0.98); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -179,7 +205,7 @@
     width: 10px;
     height: 10px;
     margin: 0 4px;
-    background: #646cff;
+    background: #7c83ff;
     border-radius: 50%;
     animation: bounce 1.2s infinite ease-in-out;
   }
@@ -195,8 +221,8 @@
   /* --- Result Card --- */
   .result-card {
     display: none;
-    background: #1a1a1a;
-    border: 1px solid #2a2a2a;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 12px;
     padding: 1.5rem;
     margin-top: 1.5rem;
@@ -235,7 +261,7 @@
     font-size: 0.95rem;
     line-height: 1.55;
     color: #bbb;
-    border-top: 1px solid #2a2a2a;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
     padding-top: 1rem;
   }
 
@@ -252,7 +278,7 @@
 
   .result-actions a {
     font-size: 0.85rem;
-    color: #8b8fff;
+    color: #a5a8ff;
     text-decoration: none;
   }
 
@@ -261,8 +287,8 @@
   /* --- Error --- */
   .error-msg {
     display: none;
-    background: #2a1515;
-    border: 1px solid #5a2020;
+    background: rgba(239, 83, 80, 0.15);
+    border: 1px solid rgba(239, 83, 80, 0.3);
     border-radius: 8px;
     padding: 0.8rem 1rem;
     margin-top: 1rem;
@@ -273,6 +299,41 @@
   .error-msg.active { display: block; }
 
   .no-price { font-size: 0.85rem; color: #ef5350; font-weight: bold; margin-bottom: 0.4rem; }
+
+  /* --- Filter Mode Toggle --- */
+  .filter-mode {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.2rem;
+  }
+
+  .filter-mode button {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+    color: #999;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .filter-mode button:first-child {
+    border-radius: 8px 0 0 8px;
+  }
+
+  .filter-mode button:last-child {
+    border-radius: 0 8px 8px 0;
+    border-left: none;
+  }
+
+  .filter-mode button.active {
+    background: #7c83ff;
+    color: #fff;
+    border-color: #7c83ff;
+  }
 
   /* --- Responsive --- */
   @media (max-width: 500px) {
@@ -355,9 +416,15 @@
     <span>I am broke</span>
   </div>
 
+  <!-- Filter Mode -->
+  <div class="filter-mode" id="filterMode">
+    <button class="active" data-mode="include">Include only</button>
+    <button data-mode="exclude">Exclude only</button>
+  </div>
+
   <!-- Cuisine Filters -->
   <div class="field">
-    <label>Cuisines (leave blank for any)</label>
+    <label id="cuisineLabel">Cuisines (leave blank for any)</label>
     <div class="cuisine-grid" id="cuisineGrid">
       <label><input type="checkbox" value="american_restaurant"> American</label>
       <label><input type="checkbox" value="asian"> Asian</label>
@@ -365,6 +432,7 @@
       <label><input type="checkbox" value="brunch_restaurant"> Brunch</label>
       <label><input type="checkbox" value="hamburger_restaurant"> Burgers</label>
       <label><input type="checkbox" value="chinese_restaurant"> Chinese</label>
+      <label><input type="checkbox" value="fast_food_restaurant"> Fast Food</label>
       <label><input type="checkbox" value="indian_restaurant"> Indian</label>
       <label><input type="checkbox" value="italian_restaurant"> Italian</label>
       <label><input type="checkbox" value="japanese_restaurant"> Japanese</label>
@@ -430,7 +498,7 @@
 </div>
 
 <script>
-// API keys are stored server-side in Vercel environment variables
+// API keys are in Vercel environment variables — proxied through /api/* endpoints
 
 // --- DOM refs ---
 const locationMode = document.getElementById('locationMode');
@@ -460,6 +528,22 @@ const resultDesc = document.getElementById('resultDesc');
 const resultMaps = document.getElementById('resultMaps');
 const resultWebsite = document.getElementById('resultWebsite');
 const resultHours = document.getElementById('resultHours');
+
+// --- Filter mode toggle ---
+const filterModeDiv = document.getElementById('filterMode');
+const cuisineLabel = document.getElementById('cuisineLabel');
+let filterMode = 'include';
+
+filterModeDiv.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  filterModeDiv.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterMode = btn.dataset.mode;
+  cuisineLabel.textContent = filterMode === 'exclude'
+    ? 'Cuisines to exclude'
+    : 'Cuisines (leave blank for any)';
+});
 
 // --- Helpers ---
 
@@ -606,7 +690,7 @@ function formatPriceDisplay(place) {
 }
 
 /** Search nearby restaurants using Google Places API (New) */
-async function searchNearby(lat, lng, radiusMeters, cuisineTypes, openNow, iAmBroke) {
+async function searchNearby(lat, lng, radiusMeters, cuisineTypes, openNow, iAmBroke, excludeMode) {
   const baseBody = {
     locationRestriction: {
       circle: {
@@ -614,10 +698,13 @@ async function searchNearby(lat, lng, radiusMeters, cuisineTypes, openNow, iAmBr
         radius: radiusMeters
       }
     },
-    includedTypes: cuisineTypes.length > 0 ? cuisineTypes : ['restaurant'],
+    includedTypes: excludeMode ? ['restaurant'] : (cuisineTypes.length > 0 ? cuisineTypes : ['restaurant']),
     maxResultCount: 20,
     languageCode: 'en'
   };
+  if (excludeMode && cuisineTypes.length > 0) {
+    baseBody.excludedTypes = cuisineTypes;
+  }
 
   const fieldMask = [
     'places.displayName',
@@ -650,9 +737,9 @@ async function searchNearby(lat, lng, radiusMeters, cuisineTypes, openNow, iAmBr
     })
   ];
 
-  // When no cuisine filter is set, also search specialty types that Google
-  // doesn't return under generic "restaurant"
-  if (cuisineTypes.length === 0) {
+  // When no cuisine filter is set (include mode), also search specialty types
+  // that Google doesn't return under generic "restaurant"
+  if (cuisineTypes.length === 0 && !excludeMode) {
     const specialtyTypes = ['steak_house', 'fine_dining_restaurant', 'brunch_restaurant']
       .filter(t => !(iAmBroke && t === 'fine_dining_restaurant'));
     const specialtyBody = {
@@ -808,7 +895,8 @@ generateBtn.addEventListener('click', async () => {
     const iAmBroke = iAmBrokeCheckbox.checked;
 
     // 6. Search nearby restaurants
-    let places = await searchNearby(searchCenter.lat, searchCenter.lng, radiusMeters, cuisineTypes, openNow, iAmBroke);
+    const excludeMode = filterMode === 'exclude';
+    let places = await searchNearby(searchCenter.lat, searchCenter.lng, radiusMeters, cuisineTypes, openNow, iAmBroke, excludeMode);
 
     if (places.length === 0) {
       throw new Error('No results found. Try expanding your search distance or removing filters.');
@@ -919,6 +1007,5 @@ locationMode.addEventListener('change', () => {
 });
 </script>
 
-<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
