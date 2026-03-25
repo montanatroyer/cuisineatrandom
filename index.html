@@ -335,6 +335,30 @@
     border-color: #7c83ff;
   }
 
+  /* --- Section Header with Master Toggle --- */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .section-header label.section-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #999;
+    margin-bottom: 0;
+    cursor: default;
+  }
+
+  .section-header input[type="checkbox"] {
+    accent-color: #7c83ff;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+  }
+
   /* --- Responsive --- */
   @media (max-width: 500px) {
     .row { flex-direction: column; gap: 0; }
@@ -424,7 +448,10 @@
 
   <!-- Cuisine Filters -->
   <div class="field">
-    <label id="cuisineLabel">Cuisines (leave blank for any)</label>
+    <div class="section-header">
+      <input type="checkbox" id="cuisineMaster">
+      <label class="section-label" id="cuisineLabel">Cuisines (leave blank for any)</label>
+    </div>
     <div class="cuisine-grid" id="cuisineGrid">
       <label><input type="checkbox" value="american_restaurant"> American</label>
       <label><input type="checkbox" value="asian"> Asian</label>
@@ -454,7 +481,10 @@
 
   <!-- Other Filters -->
   <div class="field">
-    <label>Other</label>
+    <div class="section-header">
+      <input type="checkbox" id="otherMaster">
+      <label class="section-label">Other</label>
+    </div>
     <div class="cuisine-grid" id="otherGrid">
       <label><input type="checkbox" value="bakery"> Bakery</label>
       <label><input type="checkbox" value="bar_and_grill"> Bar</label>
@@ -541,9 +571,33 @@ filterModeDiv.addEventListener('click', e => {
   btn.classList.add('active');
   filterMode = btn.dataset.mode;
   cuisineLabel.textContent = filterMode === 'exclude'
-    ? 'Cuisines to exclude'
+    ? 'Cuisines'
     : 'Cuisines (leave blank for any)';
 });
+
+// --- Master toggles for Cuisines / Other ---
+const cuisineMaster = document.getElementById('cuisineMaster');
+const otherMaster = document.getElementById('otherMaster');
+const cuisineGrid = document.getElementById('cuisineGrid');
+const otherGrid = document.getElementById('otherGrid');
+
+function syncMaster(masterCheckbox, grid) {
+  const boxes = grid.querySelectorAll('input[type="checkbox"]');
+  const checkedCount = grid.querySelectorAll('input[type="checkbox"]:checked').length;
+  masterCheckbox.checked = boxes.length > 0 && checkedCount === boxes.length;
+  masterCheckbox.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
+}
+
+cuisineMaster.addEventListener('change', () => {
+  cuisineGrid.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = cuisineMaster.checked);
+});
+
+otherMaster.addEventListener('change', () => {
+  otherGrid.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = otherMaster.checked);
+});
+
+cuisineGrid.addEventListener('change', () => syncMaster(cuisineMaster, cuisineGrid));
+otherGrid.addEventListener('change', () => syncMaster(otherMaster, otherGrid));
 
 // --- Helpers ---
 
@@ -894,9 +948,37 @@ generateBtn.addEventListener('click', async () => {
     // 5. Get "I am broke" preference
     const iAmBroke = iAmBrokeCheckbox.checked;
 
-    // 6. Search nearby restaurants
-    const excludeMode = filterMode === 'exclude';
-    let places = await searchNearby(searchCenter.lat, searchCenter.lng, radiusMeters, cuisineTypes, openNow, iAmBroke, excludeMode);
+    // 6. Search nearby restaurants — smart exclude logic
+    let excludeMode = filterMode === 'exclude';
+    let searchTypes = cuisineTypes;
+
+    if (excludeMode && cuisineTypes.length > 0) {
+      const allCuisineBoxes = cuisineGrid.querySelectorAll('input[type="checkbox"]');
+      const allOtherBoxes = otherGrid.querySelectorAll('input[type="checkbox"]');
+      const allCuisinesExcluded = [...allCuisineBoxes].every(cb => cb.checked);
+      const allOtherExcluded = [...allOtherBoxes].every(cb => cb.checked);
+
+      if (allCuisinesExcluded && allOtherExcluded) {
+        throw new Error("You've excluded everything! Uncheck some items to see results.");
+      }
+
+      if (allCuisinesExcluded) {
+        // All cuisines excluded → search for non-excluded Other types instead
+        const wantedOther = [...allOtherBoxes].filter(cb => !cb.checked).map(cb => cb.value);
+        searchTypes = wantedOther.length > 0 ? wantedOther : [...allOtherBoxes].map(cb => cb.value);
+        excludeMode = false;
+      } else if (allOtherExcluded) {
+        // All Other excluded → search for non-excluded cuisine types instead
+        const wantedCuisines = [...new Set(
+          [...allCuisineBoxes].filter(cb => !cb.checked)
+            .flatMap(cb => cb.value === 'asian' ? ASIAN_TYPES : [cb.value])
+        )];
+        searchTypes = wantedCuisines.length > 0 ? wantedCuisines : ['restaurant'];
+        excludeMode = false;
+      }
+    }
+
+    let places = await searchNearby(searchCenter.lat, searchCenter.lng, radiusMeters, searchTypes, openNow, iAmBroke, excludeMode);
 
     if (places.length === 0) {
       throw new Error('No results found. Try expanding your search distance or removing filters.');
