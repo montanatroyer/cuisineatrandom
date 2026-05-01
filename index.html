@@ -408,7 +408,7 @@
     <input type="text" id="dd" placeholder="e.g. 34.052235, -118.243683">
   </div>
 
-  <!-- Distance + Open Now row -->
+  <!-- Distance + Results row -->
   <div class="row">
     <div class="field">
       <label for="distance">Distance</label>
@@ -418,6 +418,14 @@
         <option value="16093" selected>0–10 miles</option>
         <option value="32187">0–20 miles</option>
         <option value="50000">0–30 miles</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="resultCount">Results</label>
+      <select id="resultCount">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
       </select>
     </div>
   </div>
@@ -509,22 +517,8 @@
   <!-- Error -->
   <div class="error-msg" id="error"></div>
 
-  <!-- Result -->
-  <div class="result-card" id="result">
-    <h2 id="resultName"></h2>
-    <div class="result-actions">
-      <a id="resultMaps" href="#" target="_blank" rel="noopener">Open in Google Maps</a>
-      <a id="resultWebsite" href="#" target="_blank" rel="noopener" style="display:none;">Visit Website</a>
-    </div>
-    <div class="no-price" id="resultNoPrice"></div>
-    <div class="result-meta">
-      <div id="resultAddress"></div>
-      <div><span class="rating" id="resultRating"></span> <span id="resultPrice"></span> <span id="resultOpenStatus"></span></div>
-      <div id="resultHours"></div>
-      <div class="distance" id="resultDistance"></div>
-    </div>
-    <div class="result-description" id="resultDesc">Loading description...</div>
-  </div>
+  <!-- Results -->
+  <div id="results"></div>
 </div>
 
 <script>
@@ -541,23 +535,13 @@ const geoStatus = document.getElementById('geoStatus');
 const zipcodeInput = document.getElementById('zipcode');
 const ddInput = document.getElementById('dd');
 const distanceSelect = document.getElementById('distance');
+const resultCountSelect = document.getElementById('resultCount');
 const openNowCheckbox = document.getElementById('openNow');
 const iAmBrokeCheckbox = document.getElementById('iAmBroke');
 const generateBtn = document.getElementById('generateBtn');
 const spinner = document.getElementById('spinner');
 const errorDiv = document.getElementById('error');
-const resultCard = document.getElementById('result');
-const resultName = document.getElementById('resultName');
-const resultNoPrice = document.getElementById('resultNoPrice');
-const resultAddress = document.getElementById('resultAddress');
-const resultRating = document.getElementById('resultRating');
-const resultOpenStatus = document.getElementById('resultOpenStatus');
-const resultDistance = document.getElementById('resultDistance');
-const resultPrice = document.getElementById('resultPrice');
-const resultDesc = document.getElementById('resultDesc');
-const resultMaps = document.getElementById('resultMaps');
-const resultWebsite = document.getElementById('resultWebsite');
-const resultHours = document.getElementById('resultHours');
+const resultsContainer = document.getElementById('results');
 
 // --- Filter mode toggle ---
 const filterModeDiv = document.getElementById('filterMode');
@@ -887,6 +871,86 @@ function formatRating(rating, count) {
   return `${stars} ${rating.toFixed(1)}${countStr}`;
 }
 
+/** Pick n distinct random items from arr */
+function pickRandom(arr, n) {
+  const copy = [...arr];
+  const out = [];
+  while (out.length < n && copy.length > 0) {
+    const idx = Math.floor(Math.random() * copy.length);
+    out.push(copy.splice(idx, 1)[0]);
+  }
+  return out;
+}
+
+/** Build a result card DOM node for a place. Returns { card, name, address, descEl } */
+function createResultCard(place, userLocation) {
+  const name = place.displayName?.text || 'Unknown Restaurant';
+  const address = place.formattedAddress || '';
+  const rating = place.rating;
+  const ratingCount = place.userRatingCount;
+  const isOpen = place.currentOpeningHours?.openNow;
+  const mapsUrl = place.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + address)}`;
+
+  let distText = '';
+  if (userLocation && place.location) {
+    const dist = haversine(userLocation.lat, userLocation.lng, place.location.latitude, place.location.longitude);
+    distText = `~${dist.toFixed(1)} miles from you`;
+  }
+
+  const priceDollars = formatPriceDisplay(place);
+  const priceText = priceDollars ? ` · ${priceDollars}` : '';
+  const noPriceText = priceDollars ? '' : 'Price unavailable. Proceed with caution (and maybe a backup credit card).';
+
+  const openStatusClass = isOpen ? 'open' : 'closed';
+  const openStatusText = isOpen === true ? ' · Open Now' : isOpen === false ? ' · Closed' : '';
+
+  let hoursText = '';
+  const weekdays = place.currentOpeningHours?.weekdayDescriptions;
+  if (weekdays && weekdays.length === 7) {
+    const todayIndex = (new Date().getDay() + 6) % 7;
+    const todayLine = weekdays[todayIndex];
+    const colonPos = todayLine.indexOf(':');
+    hoursText = colonPos !== -1 ? "Today's Hours: " + todayLine.substring(colonPos + 1).trim() : todayLine;
+  }
+
+  const card = document.createElement('div');
+  card.className = 'result-card active';
+  card.innerHTML = `
+    <h2></h2>
+    <div class="result-actions">
+      <a class="maps-link" href="#" target="_blank" rel="noopener">Open in Google Maps</a>
+      <a class="website-link" href="#" target="_blank" rel="noopener" style="display:none;">Visit Website</a>
+    </div>
+    <div class="no-price"></div>
+    <div class="result-meta">
+      <div class="address-line"></div>
+      <div><span class="rating-line"></span><span class="price-line"></span><span class="open-status"></span></div>
+      <div class="hours-line"></div>
+      <div class="distance"></div>
+    </div>
+    <div class="result-description loading">Generating description...</div>
+  `;
+
+  card.querySelector('h2').textContent = name;
+  card.querySelector('.address-line').textContent = address;
+  card.querySelector('.rating-line').innerHTML = formatRating(rating, ratingCount);
+  card.querySelector('.price-line').textContent = priceText;
+  card.querySelector('.no-price').textContent = noPriceText;
+  const openStatusSpan = card.querySelector('.open-status');
+  openStatusSpan.classList.add(openStatusClass);
+  openStatusSpan.textContent = openStatusText;
+  card.querySelector('.hours-line').textContent = hoursText;
+  card.querySelector('.distance').textContent = distText;
+  card.querySelector('.maps-link').href = mapsUrl;
+  if (place.websiteUri) {
+    const w = card.querySelector('.website-link');
+    w.href = place.websiteUri;
+    w.style.display = '';
+  }
+
+  return { card, name, address, descEl: card.querySelector('.result-description') };
+}
+
 // --- Main ---
 
 generateBtn.addEventListener('click', async () => {
@@ -905,7 +969,7 @@ generateBtn.addEventListener('click', async () => {
   }
 
   clearError();
-  resultCard.classList.remove('active');
+  resultsContainer.innerHTML = '';
   setLoading(true);
 
   try {
@@ -984,65 +1048,22 @@ generateBtn.addEventListener('click', async () => {
       throw new Error('No results found. Try expanding your search distance or removing filters.');
     }
 
-    // 9. Pick a random restaurant
-    const place = places[Math.floor(Math.random() * places.length)];
-    const name = place.displayName?.text || 'Unknown Restaurant';
-    const address = place.formattedAddress || '';
-    const rating = place.rating;
-    const ratingCount = place.userRatingCount;
-    const isOpen = place.currentOpeningHours?.openNow;
-    const mapsUrl = place.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + address)}`;
+    // 7. Pick N distinct random restaurants
+    const requested = parseInt(resultCountSelect.value, 10) || 1;
+    const chosen = pickRandom(places, Math.min(requested, places.length));
 
-    // 8. Calculate distance if user provided coordinates
-    let distText = '';
-    if (userLocation && place.location) {
-      const dist = haversine(userLocation.lat, userLocation.lng, place.location.latitude, place.location.longitude);
-      distText = `~${dist.toFixed(1)} miles from you`;
-    }
-
-    // 9. Display result
-    resultName.textContent = name;
-    resultAddress.textContent = address;
-    resultRating.innerHTML = formatRating(rating, ratingCount);
-    const priceDollars = formatPriceDisplay(place);
-    if (priceDollars) {
-      resultPrice.textContent = ` · ${priceDollars}`;
-      resultNoPrice.textContent = '';
-    } else {
-      resultPrice.textContent = '';
-      resultNoPrice.textContent = 'Price unavailable. Proceed with caution (and maybe a backup credit card).';
-    }
-    resultOpenStatus.className = isOpen ? 'open' : 'closed';
-    resultOpenStatus.textContent = isOpen === true ? ' · Open Now' : isOpen === false ? ' · Closed' : '';
-    // Today's hours
-    const weekdays = place.currentOpeningHours?.weekdayDescriptions;
-    if (weekdays && weekdays.length === 7) {
-      const todayIndex = (new Date().getDay() + 6) % 7;
-      const todayLine = weekdays[todayIndex];
-      const colonPos = todayLine.indexOf(':');
-      resultHours.textContent = colonPos !== -1 ? "Today's Hours: " + todayLine.substring(colonPos + 1).trim() : todayLine;
-    } else {
-      resultHours.textContent = '';
-    }
-
-    resultDistance.textContent = distText;
-    resultMaps.href = mapsUrl;
-    if (place.websiteUri) {
-      resultWebsite.href = place.websiteUri;
-      resultWebsite.style.display = '';
-    } else {
-      resultWebsite.style.display = 'none';
-    }
-    resultDesc.textContent = 'Generating description...';
-    resultDesc.classList.add('loading');
-    resultCard.classList.add('active');
+    // 8. Render cards
+    const cards = chosen.map(p => createResultCard(p, userLocation));
+    cards.forEach(({ card }) => resultsContainer.appendChild(card));
 
     setLoading(false);
 
-    // 10. Generate AI description (non-blocking for UI)
-    const desc = await generateDescription(name, address);
-    resultDesc.textContent = desc;
-    resultDesc.classList.remove('loading');
+    // 9. Generate AI descriptions in parallel
+    await Promise.all(cards.map(async ({ name, address, descEl }) => {
+      const desc = await generateDescription(name, address);
+      descEl.textContent = desc;
+      descEl.classList.remove('loading');
+    }));
 
   } catch (err) {
     setLoading(false);
