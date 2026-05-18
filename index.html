@@ -642,7 +642,8 @@ function sendToHat() {
   const json = JSON.stringify(list);
   const payload = btoa(unescape(encodeURIComponent(json)));
   saveStarred([]);
-  window.location.href = `${HAT_URL}/?source=${HAT_SOURCE}&items=${payload}`;
+  updateSendBadge();
+  window.open(`${HAT_URL}/?source=${HAT_SOURCE}&items=${payload}`, '_blank');
 }
 
 sendToHatBtn.addEventListener('click', sendToHat);
